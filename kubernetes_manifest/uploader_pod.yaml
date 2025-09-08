@@ -1,0 +1,8 @@
+kind: Pod
+apiVersion: v1
+metadata:
+  name: uploader
+spec:
+  containers:
+  - name: uploader-service 
+    image: 
