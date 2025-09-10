@@ -1,0 +1,20 @@
+apiVersion: discovery.k8s.io/v1
+kind: EndpointSlice
+metadata:
+  name: mongodb-external-service # by convention, use the name of the Service
+                     # as a prefix for the name of the EndpointSlice
+  labels:
+    # You should set the "kubernetes.io/service-name" label.
+    # Set its value to match the name of the Service
+    kubernetes.io/service-name: mongodb-external-service
+addressType: IPv4
+ports:
+  - name: mongo-connect # should match with the name of the service port defined above
+    appProtocol: http
+    protocol: TCP
+    port: 27017
+endpoints:
+  - addresses:
+      - "172.17.0.2"
+    conditions:
+      ready: true
