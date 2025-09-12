@@ -7,8 +7,8 @@ set -e  # Exit on any error
 # Configuration variables
 MONGODB_VERSION="7.0.14"
 DATABASE_NAME="uploaded-files"
-USERNAME="wiz-user"
-ADMIN_USERNAME="admin"
+USERNAME="wizUser"
+ADMIN_USERNAME="wizAdmin"
 
 # Colors for output
 RED='\033[0;31m'
@@ -45,8 +45,8 @@ check_root() {
 
 # Generate secure passwords
 generate_passwords() {
-    ADMIN_PASSWORD=Admin3547!
-    USER_PASSWORD=User3547!
+    ADMIN_PASSWORD=wizAdmin3547
+    USER_PASSWORD=wizUser3547
     log "Generated secure passwords"
 }
 
@@ -93,51 +93,6 @@ install_mongodb() {
     log "MongoDB Community Edition $MONGODB_VERSION installed successfully"
 }
 
-# # Configure MongoDB
-# configure_mongodb() {
-#     log "Configuring MongoDB..."
-    
-#     # Backup original config
-#     sudo cp /etc/mongod.conf /etc/mongod.conf.backup
-    
-#     # Create new configuration
-#     sudo tee /etc/mongod.conf > /dev/null <<EOF
-# # mongod.conf
-
-# # for documentation of all options, see:
-# #   http://docs.mongodb.org/manual/reference/configuration-options/
-
-
-# # Where to write logging data
-# systemLog:
-#   destination: file
-#   logAppend: true
-#   path: /var/log/mongodb/mongod.log
-
-# # Network interfaces
-# net:
-#   port: 27017
-#   bindIp: 127.0.0.1,$(ip route get 1 | awk '{print $7}' | head -1)
-
-# # Process management
-# processManagement:
-#   timeZoneInfo: /usr/share/zoneinfo
-
-# # Security
-# security:
-#   authorization: enabled
-
-# # Replication (optional)
-# #replication:
-
-# # Sharding (optional)
-# #sharding:
-# EOF
-
-#     log "MongoDB configuration updated"
-# }
-
-
 # Start MongoDB service
 start_mongodb() {
     log "Starting MongoDB service..."
@@ -163,22 +118,11 @@ create_admin_user() {
     log "Creating admin user..."
     
     # Connect to MongoDB and create admin user
-    mongosh --quiet --eval "
-        use admin;
-        db.createUser({
-            user: '$ADMIN_USERNAME',
-            pwd: '$ADMIN_PASSWORD',
-            roles: [
-                { role: 'userAdminAnyDatabase', db: 'admin' },
-                { role: 'readWriteAnyDatabase', db: 'admin' },
-                { role: 'dbAdminAnyDatabase', db: 'admin' },
-                { role: 'clusterAdmin', db: 'admin' }
-            ]
-        });
-        print('Admin user created successfully');
-    "
-    
-    log "Admin user '$ADMIN_USERNAME' created"
+    if mongosh --quiet -f ./createAdminUser.js; then
+        log "Admin user '$ADMIN_USERNAME' created"
+    else 
+        error "Error on user creation"
+    fi 
 }
 
 # Create database and user
@@ -186,24 +130,12 @@ create_database_and_user() {
     log "Creating database '$DATABASE_NAME' and user '$USERNAME'..."
     
     # Connect with admin credentials and create database user
-    mongosh --quiet -u "$ADMIN_USERNAME" -p "$ADMIN_PASSWORD" --authenticationDatabase admin --eval "
-        use $DATABASE_NAME;
-        db.createUser({
-            user: '$USERNAME',
-            pwd: '$USER_PASSWORD',
-            roles: [
-                { role: 'readWrite', db: '$DATABASE_NAME' },
-                { role: 'dbAdmin', db: '$DATABASE_NAME' }
-            ]
-        });
-        
-        // Create a sample collection to ensure database exists
-        db.test.insertOne({message: 'Database created successfully', timestamp: new Date()});
-        print('Database and user created successfully');
-    "
-    
-    log "Database '$DATABASE_NAME' and user '$USERNAME' created successfully"
-}
+    if mongosh --quiet -u "$ADMIN_USERNAME" -p "$ADMIN_PASSWORD" --authenticationDatabase admin -f ./createWizUser.js; then
+        log "Database '$DATABASE_NAME' and user '$USERNAME' created successfully"
+    else
+        error "Error on authentication, user creation or db creation"
+    fi
+}   
 
 # Restart MongoDB with authentication
 restart_with_auth() {
@@ -320,11 +252,10 @@ EOF
 main() {
     log "Starting MongoDB Community Edition 7.0.14 installation script"
     
-    check_root
+    #check_root
     generate_passwords
-    install_mongodb
-    # configure_mongodb
-    start_mongodb
+    #install_mongodb
+    #start_mongodb
     create_admin_user
     create_database_and_user
     restart_with_auth

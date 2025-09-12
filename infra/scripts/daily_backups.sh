@@ -7,6 +7,8 @@
 BACKUP_DIR="/home/ubuntu/mongodb-backups"
 MONGO_HOST="localhost"
 MONGO_PORT="27017"
+USER="wizAdmin"
+USER_PASS="wizAdmin3547"
 DATE=$(date +"%Y_%m_%d")
 BACKUP_NAME="mongodb_backup_$DATE"
 LOG_FILE="$BACKUP_DIR/backup-$DATE.log"
@@ -23,19 +25,15 @@ log_message() {
 # Start backup process
 log_message "Starting MongoDB backup..."
 
-# Check if mongodump is available
-if ! command -v mongodump &> /dev/null; then
-    log_message "ERROR: mongodump not found. Please install MongoDB tools."
-    exit 1
-fi
-
 # Check if MongoDB is running
 if ! pgrep -x "mongod" > /dev/null; then
     log_message "WARNING: MongoDB process not found. Attempting backup anyway..."
 fi
 
 # Test MongoDB connection
-if ! mongo --host "$MONGO_HOST" --port "$MONGO_PORT" --eval "db.runCommand('ping')" &>/dev/null; then
+if ! mongosh --host "$MONGO_HOST" \
+    --port "$MONGO_PORT" \
+    --eval "db.runCommand('ping')" &>/dev/null; then
     log_message "ERROR: Cannot connect to MongoDB at $MONGO_HOST:$MONGO_PORT"
     exit 1
 fi
@@ -44,7 +42,10 @@ fi
 log_message "Creating backup: $BACKUP_NAME"
 
 # Run mongodump
-if mongodump --host "$MONGO_HOST" --port "$MONGO_PORT" --out "$BACKUP_DIR/$BACKUP_NAME" 2>&1 | tee -a "$LOG_FILE"; then
+if mongodump -u "$USER" -p "$USER_PASS" \
+    --host "$MONGO_HOST" \
+    --port "$MONGO_PORT" \
+    --out "$BACKUP_DIR/$BACKUP_NAME" 2>&1 | tee -a "$LOG_FILE"; then
     
     # Compress the backup
     log_message "Compressing backup..."
